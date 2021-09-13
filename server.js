@@ -1,5 +1,6 @@
 // cài thư viện cheerio và request-promise
 // npm install cheerio request-promise
+// run bằng lệnh node server.js
 const cheerio = require('cheerio');
 
 const request = require('request-promise');

@@ -9,10 +9,11 @@ const keySearch = "倉庫　軽作業　千葉県流山市";
 const encSear = encodeURI(keySearch);
 // input start from
 let start = 0;
-
+let lrad = 10.0;
 let count = 10;
 let stop = false;
 let dataRs = [];
+
 
 const header = [
 	// Title of the columns (column_names)
@@ -73,7 +74,7 @@ async function asyncCall() {
 		if (!stop) {
 			stop = true;
 			const options = {
-				uri: 'https://www.google.com/search?yv=3&rciv=jb&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
+				uri: 'https://www.google.com/search?yv=3&rciv=jb&lrad='+lrad+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
 				headers: {
 					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
 					'sec-ch-ua-platform':  "Windows",

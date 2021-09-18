@@ -1,39 +1,40 @@
-// run with cmd: node server.js
+// run with cmd: nodemon index
 const cheerio = require('cheerio');
 const request = require('request-promise');
 const fs = require('fs');
 const listJobType = ["フルタイム", "パートタイム", "契約社員", "インターン"];
 
-// input key search
-const keySearch = "倉庫　軽作業　千葉県流山市";
-const encSear = encodeURI(keySearch);
 // input start from
 let start = 0;
 let lrad = 10.0;
 let count = 10;
 let stop = false;
 let dataRs = [];
+let sum = 0;
 
 
 const header = [
 	// Title of the columns (column_names)
 	'Job Name',
 	'Post Person Jobs',
-	'Salary',
-	'Job Type',
-	'Provider'
+	'Provider',
+	'Salary Min',
+	'Salary Max',
+	'Job Type'
 ];
 
 function contentMethod(options) {
 	const a =  request(options, (error, response, html) => {
 		if(!error && response.statusCode == 200) {
 			const $ = cheerio.load(html);
-			let data = []
+			setTimeout(function () {}, 200)
+			let data = [];
 			count = $('.pE8vnd.avtvi').length;
 			$('.pE8vnd.avtvi').each((index, el) => {
 				const jobName = $(el).find('.sH3zFd h2').text();
 				const postPerson = $(el).find('.nJlQNd.sMzDkb').text();
-				let salary = "";
+				let salaryMin = "";
+				let salaryMax = "";
 				let jobType = "";
 				$(el).find('.ocResc.icFQAc .n1Mpqb').each((i,ele) => {
 				if (i!=0){
@@ -41,36 +42,43 @@ function contentMethod(options) {
 					if (listJobType.indexOf(str) != -1) {
 						jobType = str;
 					} else {
-						salary = str;
+						let salary = str.replace('1 時間 ', '').split('～');
+						salaryMin = salary[0] ? salary[0] : '';
+						salaryMax = salary[1] ? salary[1] : '';
 					}
 				}
 				});
+				const provider = $(el).find('.pMhGee.Co68jc.j0vryd').text().split(": ")[1];
+				
 				data.push({
-				jobName, postPerson, salary, jobType
+				jobName, postPerson, provider, salaryMin, salaryMax, jobType
 				});
 			});
-			$('.oNwCmf').each((index, el) => {
-				$(el).find('.Qk80Jf').each((i,ele) => {
-					if (i!=0){
-						data[index].provider = $(ele).text();
-					}
-				});
-			})
 			dataRs.push(...data);
 		}
 		else {
 			console.log(error);
 		}
+		
+		if (count != 0) {
+			sum += count;
+			console.log("Total number of rows crawled: " + (sum));
+		}
 		start += 10;
 		stop = false;
-		console.log(start);
 	});
 	return a;
 }
 
-async function asyncCall() {
+async function asyncCall(keySearch) {
+	// input key search
+	// let keySearch = "倉庫　軽作業　千葉県流山市";
+	const encSear = encodeURI(keySearch);
+	count = 10;
+	start = 0;
+	sum = 0;
 	// when data form gg < 10 record -> stop while
-	while(count >= 10){
+	while(count > 0){
 		if (!stop) {
 			stop = true;
 			const options = {
@@ -86,6 +94,7 @@ async function asyncCall() {
 			writeCsv(dataRs);
 		}
 	}
+	if (sum == 0) console.log("data not found!")
 }
 
 // write data to file csv
@@ -106,11 +115,12 @@ function writeCsv(jsonObject) {
 		fileString = fileString.slice(0, -1)
 		fileString += "\n"
 	})
-	fs.writeFileSync(file, fileString, 'utf8');
+	fs.writeFileSync(file, "\uFEFF" + fileString, 'utf8');
 }
-
-asyncCall();
-
+exports.asyncCall =async function(keySearch){
+    await asyncCall(keySearch);
+	return {sum: sum};
+}
 
 
 

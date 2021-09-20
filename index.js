@@ -26,7 +26,8 @@ app.use(express.urlencoded({
 app.post('/home', async (req, res) => {
     try {
         const keyword = req.body.keyword;
-        const resCrawl = await file.asyncCall(keyword);
+        const bukken_id = req.body.bukken_id;
+        const resCrawl = await file.asyncCall(keyword, bukken_id);
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(resCrawl));
     } catch (error) {

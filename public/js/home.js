@@ -145,11 +145,11 @@
     }
 
     // call api backend
-    async function crawlData(no, data, bukken_id) {
+    async function crawlData(dataObj) {
       try {
         await fetch('/home',  {
           method: 'POST',
-          body: JSON.stringify(data),
+          body: JSON.stringify(dataObj),
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
@@ -160,9 +160,9 @@
           document.getElementById("submit").disabled = false;
 
           obj = {
-            no: no,
-            bukken_id: bukken_id,
-            keyword: data.keyword,
+            no: dataObj.no,
+            bukken_id: dataObj.bukken_id,
+            keyword: dataObj.keyword,
             status: getStatusBadge(SUCCESS),
             total: sum,
             action: sum === 0 ? getActionButton(FAILED) : getActionButton(SUCCESS, body.fileName)
@@ -178,9 +178,9 @@
         console.log(error);
         document.getElementById("submit").disabled = false;
         obj = {
-          no: no,
-          bukken_id: bukken_id,
-          keyword: data.keyword,
+          no: dataObj.no,
+          bukken_id: dataObj.bukken_id,
+          keyword: dataObj.keyword,
           status: getStatusBadge(FAILED),
           total: 0,
           action: getActionButton(FAILED, "")
@@ -203,7 +203,7 @@
 
       const arrTextarea = (data[0].value).split("\r\n");
       let arrayKeywords;
-      let keyword;
+      let dataObj;
       index = 1;
       stop = false;
       let obj = {};
@@ -215,13 +215,19 @@
         if (!stop) {
           stop = true;
           arrayKeywords = substringFirstLast(arrTextarea[index]).split(",");
-          keyword = {keyword: (arrayKeywords[1] + "　" + arrayKeywords[2]).replaceAll("\"", "")};
-          bukken_id = arrayKeywords[3];
           no = arrayKeywords[0];
+          bukken_id = arrayKeywords[3];
+          dataObj = {
+            no: no,
+            keyword: (arrayKeywords[1] + "　" + arrayKeywords[2]).replaceAll("\"", ""),
+            bukken_id: bukken_id
+          };
+          
+         
           // draw table
           obj = {
             no: arrayKeywords[0],
-            keyword: keyword.keyword,
+            keyword: dataObj.keyword,
             status: getStatusBadge(RUNNING),
             total: 0,
             action: getActionButton(RUNNING, "")
@@ -231,7 +237,7 @@
           table.rows.add(dataSet);
           table.draw();
 
-          await crawlData(no ,keyword, bukken_id);
+          await crawlData(dataObj);
         }
       }
     });

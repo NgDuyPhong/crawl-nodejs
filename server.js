@@ -15,17 +15,22 @@ let dataRs = [];
 let sum = 0;
 let fileNameSuccess = "";
 
+const listExclusionFlag = ["フォーク","ﾌｫｰｸ"];
 const header = [
 	// Title of the columns (column_names)
-	'Job Name',
-	'Post Person Jobs',
-	'Provider',
-	'Salary Min',
-	'Salary Max',
-	'Job Type'
+	"募集データID",
+	"物件ID",
+	"データ取得日",
+	"距離条件",
+	"除外フラグ",
+	"募集主体",
+	"提供元",
+	"求人タイトル",
+	"時給（from）",
+	"時給（to）	雇用形態"
 ];
 
-function contentMethod(options) {
+function contentMethod(options, bukken_id, dateNow, lrad) {
 	const a =  request(options, (error, response, html) => {
 		if(!error && response.statusCode == 200) {
 			const $ = cheerio.load(html);
@@ -36,7 +41,6 @@ function contentMethod(options) {
 			$('.pE8vnd.avtvi').each((index, el) => {
 				const jobName = $(el).find('.sH3zFd h2').text();
 				const postPerson = $(el).find('.nJlQNd.sMzDkb').text();
-				// console.log($('.nJlQNd.sMzDkb'));
 				let salaryMin = "";
 				let salaryMax = "";
 				let jobType = "";
@@ -55,9 +59,15 @@ function contentMethod(options) {
 				}
 				});
 				const provider = $(el).find('.pMhGee.Co68jc.j0vryd').text().split(": ")[1];
-				
+				let recruitmentID = "0";
+				let date = dateNow.toLocaleString().split(" ")[0];
+				let exclusionFlag = "N";
+				if (jobName.indexOf(listExclusionFlag[0]) != -1 || jobName.indexOf(listExclusionFlag[1]) != -1) {
+					exclusionFlag = "Y";
+				}
+				listExclusionFlag.indexOf(jobName)
 				data.push({
-				jobName, postPerson, provider, salaryMin, salaryMax, jobType
+					recruitmentID, bukken_id, date, lrad, exclusionFlag, postPerson, provider,jobName ,salaryMin, salaryMax, jobType
 				});
 			});
 			dataRs.push(...data);
@@ -76,7 +86,7 @@ function contentMethod(options) {
 	return a;
 }
 
-async function asyncCall(keySearch) {
+async function asyncCall(keySearch, bukken_id) {
 	// input key search
 	// let keySearch = "倉庫　軽作業　千葉県流山市";
 	const encSear = encodeURI(keySearch);
@@ -84,6 +94,7 @@ async function asyncCall(keySearch) {
 	start = 0;
 	sum = 0;
 	dataRs = [];
+	const dateNow = new Date();
 	// when data form gg < 10 record -> stop while
 	while(count > 0){
 		if (!stop) {
@@ -97,21 +108,21 @@ async function asyncCall(keySearch) {
 				},
 				json: true // Automatically parses the JSON string in the response
 			};
-			await contentMethod(options);
+			await contentMethod(options, bukken_id, dateNow, lrad);
 			
 		}
 	}
 	if (sum == 0) console.log("data not found!")
-	else writeCsv(dataRs, keySearch);
+	else writeCsv(dataRs, keySearch, dateNow);
 }
 
 // write data to file csv
-function writeCsv(jsonObject, keySearch) {
+function writeCsv(jsonObject, keySearch, dateNow) {
 	let fileString = ""
 	const separator = ","
 	const fileType = "csv"
 	// example name: data_2021-9-19_18-02-58_212.csv
-	const date = (new Date().toLocaleString().replace(" ", "_")).replace(/:/g, "-");
+	const date = (dateNow.toLocaleString().replace(" ", "_")).replace(/:/g, "-");
 	const fileName = `${keySearch}_${date}_${sum}.${fileType}`;
 	const file = `${__dirname}/data/${fileName}`;
 	fileNameSuccess = fileName;
@@ -128,8 +139,8 @@ function writeCsv(jsonObject, keySearch) {
 	})
 	fs.writeFileSync(file, "\uFEFF" + fileString, 'utf8');
 }
-exports.asyncCall = async function(keySearch){
-    await asyncCall(keySearch);
+exports.asyncCall = async function(keySearch, bukken_id){
+    await asyncCall(keySearch, bukken_id);
 	return {sum: sum, fileName: fileNameSuccess};
 }
 

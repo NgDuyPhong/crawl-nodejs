@@ -2,7 +2,9 @@
 const cheerio = require('cheerio');
 const request = require('request-promise');
 const fs = require('fs');
+const { data } = require('cheerio/lib/api/attributes');
 const listJobType = ["フルタイム", "パートタイム", "契約社員", "インターン"];
+let AN_HOUR = "1 時間 ";
 
 // input start from
 let start = 0;
@@ -11,7 +13,7 @@ let count = 10;
 let stop = false;
 let dataRs = [];
 let sum = 0;
-
+let fileNameSuccess = "";
 
 const header = [
 	// Title of the columns (column_names)
@@ -27,12 +29,14 @@ function contentMethod(options) {
 	const a =  request(options, (error, response, html) => {
 		if(!error && response.statusCode == 200) {
 			const $ = cheerio.load(html);
-			setTimeout(function () {}, 200)
+			// setTimeout(function () {}, 500)
+			// console.log(html);
 			let data = [];
 			count = $('.pE8vnd.avtvi').length;
 			$('.pE8vnd.avtvi').each((index, el) => {
 				const jobName = $(el).find('.sH3zFd h2').text();
 				const postPerson = $(el).find('.nJlQNd.sMzDkb').text();
+				// console.log($('.nJlQNd.sMzDkb'));
 				let salaryMin = "";
 				let salaryMax = "";
 				let jobType = "";
@@ -42,9 +46,11 @@ function contentMethod(options) {
 					if (listJobType.indexOf(str) != -1) {
 						jobType = str;
 					} else {
-						let salary = str.replace('1 時間 ', '').split('～');
-						salaryMin = salary[0] ? salary[0] : '';
-						salaryMax = salary[1] ? salary[1] : '';
+						if (str.indexOf(AN_HOUR) != -1) {
+							let salary = str.replace(AN_HOUR, '').split('～');
+							salaryMin = salary[0] ? salary[0] : '';
+							salaryMax = salary[1] ? salary[1] : '';
+						}
 					}
 				}
 				});
@@ -77,6 +83,7 @@ async function asyncCall(keySearch) {
 	count = 10;
 	start = 0;
 	sum = 0;
+	dataRs = [];
 	// when data form gg < 10 record -> stop while
 	while(count > 0){
 		if (!stop) {
@@ -91,23 +98,27 @@ async function asyncCall(keySearch) {
 				json: true // Automatically parses the JSON string in the response
 			};
 			await contentMethod(options);
-			writeCsv(dataRs);
+			
 		}
 	}
 	if (sum == 0) console.log("data not found!")
+	else writeCsv(dataRs, keySearch);
 }
 
 // write data to file csv
-function writeCsv(jsonObject) {
+function writeCsv(jsonObject, keySearch) {
 	let fileString = ""
 	const separator = ","
 	const fileType = "csv"
-	const file = `data.${fileType}` // có thể cộng thêm ngày để phân biệt các file
-
+	// example name: data_2021-9-19_18-02-58_212.csv
+	const date = (new Date().toLocaleString().replace(" ", "_")).replace(/:/g, "-");
+	const fileName = `${keySearch}_${date}_${sum}.${fileType}`;
+	const file = `${__dirname}/data/${fileName}`;
+	fileNameSuccess = fileName;
 	// write header
 	header.forEach(value=>fileString += `"${value}"${separator}`) // ngoặc kép "${value}" để phân biệt khi tiền có dấu ","
-	fileString = fileString.slice(0, -1)
-	fileString += "\n"
+	fileString = fileString.slice(0, -1);
+	fileString += "\n";
 
 	// write content
 	jsonObject.forEach(transaction=>{
@@ -117,9 +128,9 @@ function writeCsv(jsonObject) {
 	})
 	fs.writeFileSync(file, "\uFEFF" + fileString, 'utf8');
 }
-exports.asyncCall =async function(keySearch){
+exports.asyncCall = async function(keySearch){
     await asyncCall(keySearch);
-	return {sum: sum};
+	return {sum: sum, fileName: fileNameSuccess};
 }
 
 

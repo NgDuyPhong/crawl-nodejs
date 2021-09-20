@@ -1,31 +1,46 @@
 .danger-color {
-    color: red;
-  }
-  .success-color {
-    color: green;
-  }
-  
-  #console-background {
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-height: 200px;
-    min-height: 200px;
-    background-color: black;
-    margin: 0;
-    padding: 0;
-    overflow-y: scroll;
-  }
-  
-  #console {
-    margin: 0;
-    padding: 0;
-  }
-  
-  #console-text {
-    font-size: 12px;
-    color: rgb(255, 255, 255);
-    font-family: Monospace, serif;
-    margin: 10px 0 0 10px;
-  }
-  
+  color: red;
+}
+.success-color {
+  color: green;
+}
+
+#console-background {
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 200px;
+  min-height: 200px;
+  background-color: black;
+  margin: 0;
+  padding: 0;
+  overflow-y: scroll;
+}
+
+#console {
+  margin: 0;
+  padding: 0;
+}
+
+#console-text {
+  font-size: 12px;
+  color: rgb(255, 255, 255);
+  font-family: Monospace, serif;
+  margin: 10px 0 0 10px;
+}
+td.text-right-custom {
+  text-align: right;
+  padding-right: 30px !important;
+}
+th.text-right-custom {
+  text-align: center;
+}
+td.text-left-custom {
+  text-align: left;
+}
+th.text-left-custom {
+  text-align: center;
+}
+textarea {
+  height: 200px !important;
+}

@@ -2,6 +2,7 @@
 const cheerio = require('cheerio');
 const request = require('request-promise');
 const fs = require('fs');
+const moment = require('moment');  
 const { data } = require('cheerio/lib/api/attributes');
 const listJobType = ["フルタイム", "パートタイム", "契約社員", "インターン"];
 let AN_HOUR = "1 時間 ";
@@ -60,7 +61,7 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 				});
 				const provider = $(el).find('.pMhGee.Co68jc.j0vryd').text().split(": ")[1];
 				let recruitmentID = "0";
-				let date = dateNow.toLocaleString().split(" ")[0];
+				let date = moment(dateNow).format('YYYY-MM-DD');
 				let exclusionFlag = "N";
 				if (jobName.indexOf(listExclusionFlag[0]) != -1 || jobName.indexOf(listExclusionFlag[1]) != -1) {
 					exclusionFlag = "Y";
@@ -122,7 +123,7 @@ function writeCsv(jsonObject, keySearch, dateNow) {
 	const separator = ","
 	const fileType = "csv"
 	// example name: data_2021-9-19_18-02-58_212.csv
-	const date = (dateNow.toLocaleString().replace(" ", "_")).replace(/:/g, "-");
+	const date = moment(dateNow).format('YYYY-MM-DD_hh-mm-ss');
 	const fileName = `${keySearch}_${date}_${sum}.${fileType}`;
 	const file = `${__dirname}/data/${fileName}`;
 	fileNameSuccess = fileName;

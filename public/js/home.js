@@ -7,6 +7,7 @@
     const NOT_EXISTS = "not exists";
     const RUNNING = "running";
     const NOT_FOUND = "not found";
+    const NOT_CSV = "not CSV";
     let stop = false;
     let index = 1;
     let dataSet = [];
@@ -86,6 +87,10 @@
         $('#exampleModalLabel').html(`<div class="text-warning">Not Found</div>`);
         $('#messageModal').text("No found data with keyword!")
       }
+      if (status === NOT_CSV) {
+        $('#exampleModalLabel').html(`<div class="text-warning">No correct file csv</div>`);
+        $('#messageModal').text("Please choose file csv and try again!")
+      }
     }
 
     $(document).on('click', '#download', function () {
@@ -118,27 +123,30 @@
       }
     });
 
+    
+
     const inputFile = document.getElementById('input')
     inputFile.addEventListener('change', function() {
       try {
-        document.getElementById("submit").disabled = false;
-        readXlsxFile(inputFile.files[0]).then(function(data) {
-          // substring character array [] first and last
-          const str = substringFirstLast(objectToString(data));
-          document.getElementById('keywordsText').value =  str;
-        })
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          // set data csv to textarea
+          document.getElementById('keywordsText').value =  event.target.result;
+          document.getElementById("submit").disabled = false;
+        };
+        if (inputFile.files[0]) {
+          // check type file === .csv
+          if ((inputFile.files[0].name).substring(inputFile.files[0].name.length - 4) === ".csv") {
+            reader.readAsText(inputFile.files[0]);
+          } else {
+            showModal(NOT_CSV, "");
+          }
+        }
       } catch (error) {
         document.getElementById("submit").disabled = true;
         console.log(error)
       }
     })
-    function objectToString(obj) {
-      return str = replaceAll(JSON.stringify(obj), '],', "]\n");
-    }
-
-    function substringFirstLast(str) {
-      return (str.substring(0, str.length - 1)).substring(1);
-    }
 
     function replaceAll(str, find, replace) {
       return str.replace(new RegExp(find, 'g'), replace);
@@ -198,48 +206,76 @@
 
     // onclick button start
     $(document).on('click', '#submit', async function () {
-      document.getElementById("submit").disabled = true;
-      const data = $('form').serializeArray();
-
-      const arrTextarea = (data[0].value).split("\r\n");
-      let arrayKeywords;
-      let dataObj;
-      index = 1;
-      stop = false;
-      let obj = {};
-      table.clear();
-      dataSet = [];
-      let bukken_id = "";
-      let no = 1;
-      while (index != arrTextarea.length) {
-        if (!stop) {
-          stop = true;
-          arrayKeywords = substringFirstLast(arrTextarea[index]).split(",");
-          no = arrayKeywords[0];
-          bukken_id = arrayKeywords[3];
-          dataObj = {
-            no: no,
-            keyword: (arrayKeywords[1] + "　" + arrayKeywords[2]).replaceAll("\"", ""),
-            bukken_id: bukken_id
-          };
-          
-         
-          // draw table
-          obj = {
-            no: arrayKeywords[0],
-            keyword: dataObj.keyword,
-            status: getStatusBadge(RUNNING),
-            total: 0,
-            action: getActionButton(RUNNING, "")
+      try {
+        document.getElementById("submit").disabled = true;
+        const data = $('form').serializeArray();
+        let keyword = "";
+        let location = "";
+        let dayPosted = "";
+        data.forEach(itemForm => {
+          if (itemForm.name == "keyword") {
+            keyword = itemForm.value;
+          } else if (itemForm.name == "location") {
+            location = itemForm.value;
+          } else {
+            dayPosted = itemForm.value;
           }
-          dataSet.push(obj);
-          table.clear();
-          table.rows.add(dataSet);
-          table.draw();
+        });
+        const arrTextarea = keyword.split("\r\n");
+        let arrayKeywords;
+        let dataObj;
+        index = 1;
+        stop = false;
+        let obj = {};
+        table.clear();
+        dataSet = [];
+        let bukken_id = "";
+        let no = 1;
+        while (index != arrTextarea.length) {
+          if (!stop) {
+            stop = true;
+            arrayKeywords = arrTextarea[index].split(",");
+            let keywordReq = "";
+            if (arrayKeywords[1] || arrayKeywords[2]) {
+              keywordReq = (arrayKeywords[1] + "　" + arrayKeywords[2]).replaceAll("\"", "");
+            }
+            if (keywordReq && keywordReq !== "") {
+              no = arrayKeywords[0];
+              bukken_id = arrayKeywords[3];
+              dataObj = {
+                no: no,
+                keyword: keywordReq,
+                bukken_id: bukken_id,
+                location: location,
+                dayPosted: dayPosted
+              };
+              
+              // draw table
+              obj = {
+                no: arrayKeywords[0],
+                keyword: dataObj.keyword,
+                status: getStatusBadge(RUNNING),
+                total: 0,
+                action: getActionButton(RUNNING, "")
+              }
+              dataSet.push(obj);
+              table.clear();
+              table.rows.add(dataSet);
+              table.draw();
 
-          await crawlData(dataObj);
+              await crawlData(dataObj);
+            } else {
+              stop = false;
+              index++;
+            }
+          }
         }
+      } catch (error) {
+        console.error(error);
+        document.getElementById("submit").disabled = false;
+        showModal("", "");
       }
+      
     });
   });
 }(window.jQuery, window, document));

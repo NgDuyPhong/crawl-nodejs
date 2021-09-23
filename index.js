@@ -25,9 +25,7 @@ app.use(express.urlencoded({
 
 app.post('/home', async (req, res) => {
     try {
-        const keyword = req.body.keyword;
-        const bukken_id = req.body.bukken_id;
-        const resCrawl = await file.asyncCall(keyword, bukken_id);
+        const resCrawl = await file.asyncCall(req.body);
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(resCrawl));
     } catch (error) {
@@ -41,7 +39,6 @@ app.get('/download/:fileName', async (req, res) => {
         const file = `${__dirname}/data/${req.params.fileName}`;
         //file exists
         if (fs.existsSync(file)) {
-            console.log(123)
             res.download(file); // Set disposition and send it.
         } else {
             res.sendFile(`${__dirname}/public/html/404.html`);

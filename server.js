@@ -6,15 +6,17 @@ const moment = require('moment');
 const { data } = require('cheerio/lib/api/attributes');
 const listJobType = ["フルタイム", "パートタイム", "契約社員", "インターン"];
 let AN_HOUR = "1 時間 ";
+const crypto = require('crypto');
 
 // input start from
 let start = 0;
-let lrad = 10.0;
+let IRAD = 10.0;
 let count = 10;
 let stop = false;
 let dataRs = [];
 let sum = 0;
 let fileNameSuccess = "";
+let listHashRecruitmentID = [];
 
 const listExclusionFlag = ["フォーク","ﾌｫｰｸ"];
 const header = [
@@ -33,12 +35,12 @@ const header = [
 
 function contentMethod(options, bukken_id, dateNow, lrad) {
 	const a =  request(options, (error, response, html) => {
+		let countItem = 0;
 		if(!error && response.statusCode == 200) {
 			const $ = cheerio.load(html);
 			// setTimeout(function () {}, 500)
-			// console.log(html);
 			let data = [];
-			count = $('.pE8vnd.avtvi').length;
+			countItem = count = $('.pE8vnd.avtvi').length;
 			$('.pE8vnd.avtvi').each((index, el) => {
 				const jobName = $(el).find('.sH3zFd h2').text();
 				const postPerson = $(el).find('.nJlQNd.sMzDkb').text();
@@ -60,25 +62,38 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 				}
 				});
 				const provider = $(el).find('.pMhGee.Co68jc.j0vryd').text().split(": ")[1];
-				let recruitmentID = "0";
-				let date = moment(dateNow).format('YYYY-MM-DD');
-				let exclusionFlag = "N";
-				if (jobName.indexOf(listExclusionFlag[0]) != -1 || jobName.indexOf(listExclusionFlag[1]) != -1) {
-					exclusionFlag = "Y";
+				salaryMin = formatSalary(salaryMin);
+				salaryMax = formatSalary(salaryMax);
+
+				// create key
+				const recruitmentID = provider + jobName + salaryMin + salaryMax + jobType;
+				const hashRecruitmentID = crypto.createHash('md5').update(recruitmentID).digest('hex');
+
+				if (listHashRecruitmentID.indexOf(hashRecruitmentID) === -1) {
+					listHashRecruitmentID.push(hashRecruitmentID);
+					let date = moment(dateNow).format('YYYY-MM-DD');
+					let exclusionFlag = "N";
+					if (jobName.indexOf(listExclusionFlag[0]) != -1 || jobName.indexOf(listExclusionFlag[1]) != -1) {
+						exclusionFlag = "Y";
+					}
+					let lradStr = lrad === "" ? "2km" : "10km";
+					data.push({
+						hashRecruitmentID, bukken_id, date, lradStr, exclusionFlag, postPerson, provider, jobName, salaryMin, salaryMax, jobType
+					});
+				} else {
+					// sum item of file output-- if recruitmentID exists
+					countItem > 0 ? countItem-- : (countItem = 0);
 				}
-				listExclusionFlag.indexOf(jobName)
-				data.push({
-					recruitmentID, bukken_id, date, lrad, exclusionFlag, postPerson, provider,jobName ,salaryMin, salaryMax, jobType
-				});
+				
 			});
 			dataRs.push(...data);
 		}
 		else {
 			console.log(error);
 		}
-		
-		if (count != 0) {
-			sum += count;
+
+		if (countItem != 0) {
+			sum += countItem;
 			console.log("Total number of rows crawled: " + (sum));
 		}
 		start += 10;
@@ -87,21 +102,32 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 	return a;
 }
 
-async function asyncCall(keySearch, bukken_id) {
+function formatSalary(salary) {
+	if (salary) {
+		salary = salary.replace("￥", "");
+		salary = salary.replace(",", "");
+	}
+	return salary;
+}
+
+async function asyncCall(req) {
 	// input key search
 	// let keySearch = "倉庫　軽作業　千葉県流山市";
-	const encSear = encodeURI(keySearch);
+	const encSear = encodeURI(req.keyword);
+	let lrad = req.location != "2" ? ("&lrad=" + IRAD) : "";
+	let chips = req.dayPosted != "0" ? ("&chips=date_posted:" + req.dayPosted + "&schips=date_posted;" + req.dayPosted) : ""
 	count = 10;
 	start = 0;
 	sum = 0;
 	dataRs = [];
+	listHashRecruitmentID = [];
 	const dateNow = new Date();
 	// when data form gg < 10 record -> stop while
 	while(count > 0){
 		if (!stop) {
 			stop = true;
 			const options = {
-				uri: 'https://www.google.com/search?yv=3&rciv=jb&lrad='+lrad+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
+				uri: 'https://www.google.com/search?yv=3&rciv=jb'+lrad+chips+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
 				headers: {
 					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
 					'sec-ch-ua-platform':  "Windows",
@@ -109,12 +135,12 @@ async function asyncCall(keySearch, bukken_id) {
 				},
 				json: true // Automatically parses the JSON string in the response
 			};
-			await contentMethod(options, bukken_id, dateNow, lrad);
-			
+			// console.log('https://www.google.com/search?yv=3&rciv=jb'+lrad+chips+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc');
+			await contentMethod(options, req.bukken_id, dateNow, lrad);
 		}
 	}
 	if (sum == 0) console.log("data not found!")
-	else writeCsv(dataRs, keySearch, dateNow);
+	else writeCsv(dataRs, req.keyword, dateNow);
 }
 
 // write data to file csv
@@ -122,13 +148,13 @@ function writeCsv(jsonObject, keySearch, dateNow) {
 	let fileString = ""
 	const separator = ","
 	const fileType = "csv"
-	// example name: data_2021-9-19_18-02-58_212.csv
-	const date = moment(dateNow).format('YYYY-MM-DD_hh-mm-ss');
+	// example name: 倉庫 軽作業　千葉県流山市_2021-09-22_09-50-06_217.csv
+	const date = moment(dateNow).format('YYYY-MM-DD_hh-mm-ss-SSS');
 	const fileName = `${keySearch}_${date}_${sum}.${fileType}`;
 	const file = `${__dirname}/data/${fileName}`;
 	fileNameSuccess = fileName;
 	// write header
-	header.forEach(value=>fileString += `"${value}"${separator}`) // ngoặc kép "${value}" để phân biệt khi tiền có dấu ","
+	header.forEach(value=>fileString += `${value}${separator}`) // ngoặc kép "${value}" để phân biệt khi tiền có dấu ","
 	fileString = fileString.slice(0, -1);
 	fileString += "\n";
 
@@ -140,10 +166,11 @@ function writeCsv(jsonObject, keySearch, dateNow) {
 	})
 	fs.writeFileSync(file, "\uFEFF" + fileString, 'utf8');
 }
-exports.asyncCall = async function(keySearch, bukken_id){
-    await asyncCall(keySearch, bukken_id);
+exports.asyncCall = async function(req){
+    await asyncCall(req);
 	return {sum: sum, fileName: fileNameSuccess};
 }
+
 
 
 

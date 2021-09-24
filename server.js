@@ -38,7 +38,7 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 		let countItem = 0;
 		if(!error && response.statusCode == 200) {
 			const $ = cheerio.load(html);
-			// setTimeout(function () {}, 500)
+			setTimeout(function () {}, 500)
 			let data = [];
 			countItem = count = $('.pE8vnd.avtvi').length;
 			$('.pE8vnd.avtvi').each((index, el) => {
@@ -64,13 +64,13 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 				const provider = $(el).find('.pMhGee.Co68jc.j0vryd').text().split(": ")[1];
 				salaryMin = formatSalary(salaryMin);
 				salaryMax = formatSalary(salaryMax);
-
+				const recruitmentID = "0";
 				// create key
-				const recruitmentID = provider + jobName + salaryMin + salaryMax + jobType;
-				const hashRecruitmentID = crypto.createHash('md5').update(recruitmentID).digest('hex');
+				// const recruitmentID = provider + jobName + salaryMin + salaryMax + jobType;
+				// const hashRecruitmentID = crypto.createHash('md5').update(recruitmentID).digest('hex');
 
-				if (listHashRecruitmentID.indexOf(hashRecruitmentID) === -1) {
-					listHashRecruitmentID.push(hashRecruitmentID);
+				// if (listHashRecruitmentID.indexOf(hashRecruitmentID) === -1) {
+				// 	listHashRecruitmentID.push(hashRecruitmentID);
 					let date = moment(dateNow).format('YYYY-MM-DD');
 					let exclusionFlag = "N";
 					if (jobName.indexOf(listExclusionFlag[0]) != -1 || jobName.indexOf(listExclusionFlag[1]) != -1) {
@@ -78,12 +78,12 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 					}
 					let lradStr = lrad === "" ? "2km" : "10km";
 					data.push({
-						hashRecruitmentID, bukken_id, date, lradStr, exclusionFlag, postPerson, provider, jobName, salaryMin, salaryMax, jobType
+						recruitmentID, bukken_id, date, lradStr, exclusionFlag, postPerson, provider, jobName, salaryMin, salaryMax, jobType
 					});
-				} else {
-					// sum item of file output-- if recruitmentID exists
-					countItem > 0 ? countItem-- : (countItem = 0);
-				}
+				// } else {
+				// 	// sum item of file output-- if recruitmentID exists
+				// 	countItem > 0 ? countItem-- : (countItem = 0);
+				// }
 				
 			});
 			dataRs.push(...data);
@@ -92,8 +92,8 @@ function contentMethod(options, bukken_id, dateNow, lrad) {
 			console.log(error);
 		}
 
-		if (countItem != 0) {
-			sum += countItem;
+		if (count != 0) {
+			sum += count;
 			console.log("Total number of rows crawled: " + (sum));
 		}
 		start += 10;
@@ -114,7 +114,7 @@ async function asyncCall(req) {
 	// input key search
 	// let keySearch = "倉庫　軽作業　千葉県流山市";
 	const encSear = encodeURI(req.keyword);
-	let lrad = req.location != "2" ? ("&lrad=" + IRAD) : "";
+	let lrad = req.location != "2" ? ("&lrad=" + IRAD) : ("&lrad=2.0");
 	let chips = req.dayPosted != "0" ? ("&chips=date_posted:" + req.dayPosted + "&schips=date_posted;" + req.dayPosted) : ""
 	count = 10;
 	start = 0;
@@ -127,7 +127,7 @@ async function asyncCall(req) {
 		if (!stop) {
 			stop = true;
 			const options = {
-				uri: 'https://www.google.com/search?yv=3&rciv=jb'+lrad+chips+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
+				uri: 'https://www.google.com/search?yv=3&rciv=jb'+lrad+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc',
 				headers: {
 					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
 					'sec-ch-ua-platform':  "Windows",
@@ -135,7 +135,7 @@ async function asyncCall(req) {
 				},
 				json: true // Automatically parses the JSON string in the response
 			};
-			// console.log('https://www.google.com/search?yv=3&rciv=jb'+lrad+chips+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc');
+			console.log('https://www.google.com/search?yv=3&rciv=jb'+lrad+chips+'&nfpr=0&q='+encSear+'&start='+start+'&asearch=jb_list&async=_id:VoQFxe,_pms:hts,_fmt:pc');
 			await contentMethod(options, req.bukken_id, dateNow, lrad);
 		}
 	}
